@@ -1,52 +1,44 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { createEntry } from '@/lib/entries-api';
-import { listProjects, ProjectSummary } from '@/lib/projects-api';
-import { LogTimeEntry } from './LogTimeEntry';
+import { useProjectsQuery } from '@/hooks/queries/useProjectsQuery';
+import { useCreateEntryMutation } from '@/hooks/mutations/useCreateEntryMutation';
+import { LogTimeEntry, LogTimeEntryFormValues } from './LogTimeEntry';
 
 export function LogTimeEntryContainer() {
   const user = useRequireAuth();
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [projectsLoading, setProjectsLoading] = useState(true);
-  const [projectId, setProjectId] = useState('');
-  const [date, setDate] = useState('');
-  const [hours, setHours] = useState('');
-  const [notes, setNotes] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const projectsQuery = useProjectsQuery(!!user);
+  const createEntryMutation = useCreateEntryMutation();
   const [success, setSuccess] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
-    listProjects()
-      .catch(() => [])
-      .then((result) => setProjects(result ?? []))
-      .finally(() => setProjectsLoading(false));
-  }, [user]);
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<LogTimeEntryFormValues>({
+    defaultValues: { projectId: '', date: '', hours: '', notes: '' },
+  });
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
+  function onSubmit(values: LogTimeEntryFormValues) {
     setSuccess(null);
-    setLoading(true);
-
-    try {
-      await createEntry({
-        projectId: Number(projectId),
-        date,
-        hours: Number(hours),
-        notes: notes || undefined,
-      });
-      setSuccess('Time entry logged.');
-      setHours('');
-      setNotes('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
+    createEntryMutation.mutate(
+      {
+        projectId: Number(values.projectId),
+        date: values.date,
+        hours: Number(values.hours),
+        notes: values.notes || undefined,
+      },
+      {
+        onSuccess: () => {
+          setSuccess('Time entry logged.');
+          reset({ projectId: values.projectId, date: '', hours: '', notes: '' });
+        },
+      }
+    );
   }
 
   if (!user) {
@@ -55,20 +47,17 @@ export function LogTimeEntryContainer() {
 
   return (
     <LogTimeEntry
-      projects={projects}
-      projectsLoading={projectsLoading}
-      projectId={projectId}
-      date={date}
-      hours={hours}
-      notes={notes}
-      error={error}
+      projects={projectsQuery.data ?? []}
+      projectsLoading={projectsQuery.isLoading}
+      register={register}
+      control={control}
+      errors={errors}
+      apiError={
+        createEntryMutation.error instanceof Error ? createEntryMutation.error.message : null
+      }
       success={success}
-      loading={loading}
-      onProjectIdChange={setProjectId}
-      onDateChange={setDate}
-      onHoursChange={setHours}
-      onNotesChange={setNotes}
-      onSubmit={handleSubmit}
+      loading={createEntryMutation.isPending}
+      onSubmit={handleSubmit(onSubmit)}
     />
   );
 }

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Control, Controller, FieldErrors, UseFormRegister, useWatch } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -15,40 +16,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { ProjectSummary } from '@/lib/projects-api';
 
-export interface LogTimeEntryProps {
-  projects: ProjectSummary[];
-  projectsLoading: boolean;
+export interface LogTimeEntryFormValues {
   projectId: string;
   date: string;
   hours: string;
   notes: string;
-  error: string | null;
+}
+
+export interface LogTimeEntryProps {
+  projects: ProjectSummary[];
+  projectsLoading: boolean;
+  register: UseFormRegister<LogTimeEntryFormValues>;
+  control: Control<LogTimeEntryFormValues>;
+  errors: FieldErrors<LogTimeEntryFormValues>;
+  apiError: string | null;
   success: string | null;
   loading: boolean;
-  onProjectIdChange: (value: string) => void;
-  onDateChange: (value: string) => void;
-  onHoursChange: (value: string) => void;
-  onNotesChange: (value: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: React.FormEventHandler<HTMLFormElement>;
 }
 
 export function LogTimeEntry({
   projects,
   projectsLoading,
-  projectId,
-  date,
-  hours,
-  notes,
-  error,
+  register,
+  control,
+  errors,
+  apiError,
   success,
   loading,
-  onProjectIdChange,
-  onDateChange,
-  onHoursChange,
-  onNotesChange,
   onSubmit,
 }: LogTimeEntryProps) {
   const noProjectsAssigned = !projectsLoading && projects.length === 0;
+  const selectedProjectId = useWatch({ control, name: 'projectId' });
 
   return (
     <>
@@ -73,36 +72,45 @@ export function LogTimeEntry({
           <CardDescription>Record hours worked on one of your assigned projects.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+          <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
             <div className="flex flex-col gap-2">
               <Label htmlFor="project">Project</Label>
-              <Select value={projectId} onValueChange={(value) => onProjectIdChange(value ?? '')}>
-                <SelectTrigger id="project">
-                  <SelectValue placeholder="Select a project">
-                    {(value: string | null) =>
-                      projects.find((project) => String(project.id) === value)?.name ??
-                      'Select a project'
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={String(project.id)}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                name="projectId"
+                control={control}
+                rules={{ required: 'Select a project' }}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={(value) => field.onChange(value ?? '')}>
+                    <SelectTrigger id="project">
+                      <SelectValue placeholder="Select a project">
+                        {(value: string | null) =>
+                          projects.find((project) => String(project.id) === value)?.name ??
+                          'Select a project'
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={String(project.id)}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.projectId && (
+                <p className="text-sm text-destructive">{errors.projectId.message}</p>
+              )}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="date">Date</Label>
               <Input
                 id="date"
                 type="date"
-                value={date}
-                onChange={(e) => onDateChange(e.target.value)}
-                required
+                {...register('date', { required: 'Date is required' })}
               />
+              {errors.date && <p className="text-sm text-destructive">{errors.date.message}</p>}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="hours">Hours</Label>
@@ -110,19 +118,23 @@ export function LogTimeEntry({
                 id="hours"
                 type="number"
                 min={1}
+                max={24}
                 step={1}
-                value={hours}
-                onChange={(e) => onHoursChange(e.target.value)}
-                required
+                {...register('hours', {
+                  required: 'Hours is required',
+                  min: { value: 1, message: 'Must be at least 1 hour' },
+                  max: { value: 24, message: 'Cannot exceed 24 hours in a day' },
+                })}
               />
+              {errors.hours && <p className="text-sm text-destructive">{errors.hours.message}</p>}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="notes">Notes (optional)</Label>
-              <Textarea id="notes" value={notes} onChange={(e) => onNotesChange(e.target.value)} />
+              <Textarea id="notes" {...register('notes')} />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {apiError && <p className="text-sm text-destructive">{apiError}</p>}
             {success && <p className="text-sm text-emerald-600 dark:text-emerald-400">{success}</p>}
-            <Button type="submit" disabled={loading || !projectId} className="w-full">
+            <Button type="submit" disabled={loading || !selectedProjectId} className="w-full">
               {loading ? 'Logging...' : 'Log time'}
             </Button>
           </form>

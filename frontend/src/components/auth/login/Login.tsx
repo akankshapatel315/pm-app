@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { FieldErrors, UseFormRegister } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,6 +51,12 @@ export function Login({ register, errors, apiError, loading, onSubmit }: LoginPr
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? 'Logging in...' : 'Log in'}
           </Button>
+          <p className="text-center text-sm text-muted-foreground">
+            Don&apos;t have an account?{' '}
+            <Link href="/register" className="font-medium text-foreground underline underline-offset-4">
+              Register
+            </Link>
+          </p>
         </form>
       </CardContent>
     </Card>

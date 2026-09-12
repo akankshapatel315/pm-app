@@ -1,3 +1,4 @@
+import { Control, Controller, useWatch } from 'react-hook-form';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,44 +25,51 @@ const STATUS_STYLES: Record<CapStatus, { label: string; badgeClass: string; barC
   },
 };
 
+export interface AddMemberFormValues {
+  memberId: string;
+}
+
+export interface ReassignManagerFormValues {
+  managerId: string;
+}
+
 export interface ProjectDetailProps {
   data: ProjectDetailData;
   canManageMembers: boolean;
   availableMembers: UserSummary[];
-  selectedNewMemberId: string;
+  addMemberControl: Control<AddMemberFormValues>;
   addMemberError: string | null;
   addMemberLoading: boolean;
-  onSelectedNewMemberIdChange: (value: string) => void;
-  onAddMember: (e: React.FormEvent) => void;
+  onAddMember: React.FormEventHandler<HTMLFormElement>;
   isAdmin: boolean;
   managers: UserSummary[];
-  selectedManagerId: string;
+  reassignManagerControl: Control<ReassignManagerFormValues>;
   managerError: string | null;
   managerLoading: boolean;
-  onSelectedManagerIdChange: (value: string) => void;
-  onReassignManager: (e: React.FormEvent) => void;
+  onReassignManager: React.FormEventHandler<HTMLFormElement>;
 }
 
 export function ProjectDetail({
   data,
   canManageMembers,
   availableMembers,
-  selectedNewMemberId,
+  addMemberControl,
   addMemberError,
   addMemberLoading,
-  onSelectedNewMemberIdChange,
   onAddMember,
   isAdmin,
   managers,
-  selectedManagerId,
+  reassignManagerControl,
   managerError,
   managerLoading,
-  onSelectedManagerIdChange,
   onReassignManager,
 }: ProjectDetailProps) {
   const { project, manager, members, hoursLogged, percentage, status } = data;
   const style = STATUS_STYLES[status];
   const progressValue = percentage === null ? 0 : Math.min(percentage, 100);
+
+  const selectedManagerId = useWatch({ control: reassignManagerControl, name: 'managerId' });
+  const selectedMemberId = useWatch({ control: addMemberControl, name: 'memberId' });
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-4">
@@ -99,25 +107,31 @@ export function ProjectDetail({
             <CardDescription>Only admins can change who manages this project.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="flex items-end gap-2" onSubmit={onReassignManager}>
+            <form className="flex items-end gap-2" onSubmit={onReassignManager} noValidate>
               <div className="flex flex-1 flex-col gap-2">
-                <Select value={selectedManagerId} onValueChange={(value) => onSelectedManagerIdChange(value ?? '')}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a PM">
-                      {(value: string | null) => {
-                        const pm = managers.find((m) => String(m.id) === value);
-                        return pm ? `${pm.name} (${pm.email})` : 'Select a PM';
-                      }}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {managers.map((pm) => (
-                      <SelectItem key={pm.id} value={String(pm.id)}>
-                        {pm.name} ({pm.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="managerId"
+                  control={reassignManagerControl}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={(value) => field.onChange(value ?? '')}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a PM">
+                          {(value: string | null) => {
+                            const pm = managers.find((m) => String(m.id) === value);
+                            return pm ? `${pm.name} (${pm.email})` : 'Select a PM';
+                          }}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {managers.map((pm) => (
+                          <SelectItem key={pm.id} value={String(pm.id)}>
+                            {pm.name} ({pm.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
               <Button type="submit" disabled={managerLoading || !selectedManagerId}>
                 {managerLoading ? 'Reassigning...' : 'Reassign'}
@@ -146,37 +160,42 @@ export function ProjectDetail({
           )}
 
           {canManageMembers && (
-            <form className="flex items-end gap-2" onSubmit={onAddMember}>
+            <form className="flex items-end gap-2" onSubmit={onAddMember} noValidate>
               <div className="flex flex-1 flex-col gap-2">
-                <Select
-                  value={selectedNewMemberId}
-                  onValueChange={(value) => onSelectedNewMemberIdChange(value ?? '')}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue
-                      placeholder={
-                        availableMembers.length === 0 ? 'No members available to add' : 'Select a member'
-                      }
-                    >
-                      {(value: string | null) => {
-                        const member = availableMembers.find((m) => String(m.id) === value);
-                        if (member) return `${member.name} (${member.email})`;
-                        return availableMembers.length === 0
-                          ? 'No members available to add'
-                          : 'Select a member';
-                      }}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableMembers.map((member) => (
-                      <SelectItem key={member.id} value={String(member.id)}>
-                        {member.name} ({member.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="memberId"
+                  control={addMemberControl}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={(value) => field.onChange(value ?? '')}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue
+                          placeholder={
+                            availableMembers.length === 0
+                              ? 'No members available to add'
+                              : 'Select a member'
+                          }
+                        >
+                          {(value: string | null) => {
+                            const member = availableMembers.find((m) => String(m.id) === value);
+                            if (member) return `${member.name} (${member.email})`;
+                            return availableMembers.length === 0
+                              ? 'No members available to add'
+                              : 'Select a member';
+                          }}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableMembers.map((member) => (
+                          <SelectItem key={member.id} value={String(member.id)}>
+                            {member.name} ({member.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
-              <Button type="submit" disabled={addMemberLoading || !selectedNewMemberId}>
+              <Button type="submit" disabled={addMemberLoading || !selectedMemberId}>
                 {addMemberLoading ? 'Adding...' : 'Add'}
               </Button>
             </form>

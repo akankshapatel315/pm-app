@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { getStoredUser } from '@/lib/current-user';
+import { LoginContainer } from '@/components/auth/login/LoginContainer';
+import { withGuestOnly } from '@/hoc/withGuestOnly';
 
-export default function Home() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace(getStoredUser() ? '/projects' : '/login');
-  }, [router]);
-
-  return null;
+function Home() {
+  return (
+    <main className="flex min-h-screen items-center justify-center p-8">
+      <LoginContainer />
+    </main>
+  );
 }
+
+export default withGuestOnly(Home);
