@@ -1,49 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
-import { registerRequest, UserRole } from '@/lib/auth-api';
-import { Register } from './Register';
+import { useRegisterMutation } from '@/hooks/mutations/useRegisterMutation';
+import { Register, RegisterFormValues } from './Register';
 
 export function RegisterContainer() {
   const router = useRouter();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('member');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const registerMutation = useRegisterMutation();
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterFormValues>({ defaultValues: { role: 'member' } });
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    try {
-      const { token, user } = await registerRequest({ name, email, password, role });
-      localStorage.setItem('pm_app_token', token);
-      localStorage.setItem('pm_app_user', JSON.stringify(user));
-      router.push('/projects');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
+  function onSubmit(values: RegisterFormValues) {
+    registerMutation.mutate(values, {
+      onSuccess: ({ token, user }) => {
+        localStorage.setItem('pm_app_token', token);
+        localStorage.setItem('pm_app_user', JSON.stringify(user));
+        router.push('/projects');
+      },
+    });
   }
 
   return (
     <Register
-      name={name}
-      email={email}
-      password={password}
-      role={role}
-      error={error}
-      loading={loading}
-      onNameChange={setName}
-      onEmailChange={setEmail}
-      onPasswordChange={setPassword}
-      onRoleChange={setRole}
-      onSubmit={handleSubmit}
+      register={register}
+      control={control}
+      errors={errors}
+      apiError={registerMutation.error instanceof Error ? registerMutation.error.message : null}
+      loading={registerMutation.isPending}
+      onSubmit={handleSubmit(onSubmit)}
     />
   );
 }

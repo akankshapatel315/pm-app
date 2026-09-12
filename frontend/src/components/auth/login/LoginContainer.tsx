@@ -1,43 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
-import { loginRequest } from '@/lib/auth-api';
-import { Login } from './Login';
+import { useLoginMutation } from '@/hooks/mutations/useLoginMutation';
+import { Login, LoginFormValues } from './Login';
 
 export function LoginContainer() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const loginMutation = useLoginMutation();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormValues>();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    try {
-      const { token, user } = await loginRequest({ email, password });
-      localStorage.setItem('pm_app_token', token);
-      localStorage.setItem('pm_app_user', JSON.stringify(user));
-      router.push('/projects');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
+  function onSubmit(values: LoginFormValues) {
+    loginMutation.mutate(values, {
+      onSuccess: ({ token, user }) => {
+        localStorage.setItem('pm_app_token', token);
+        localStorage.setItem('pm_app_user', JSON.stringify(user));
+        router.push('/projects');
+      },
+    });
   }
 
   return (
     <Login
-      email={email}
-      password={password}
-      error={error}
-      loading={loading}
-      onEmailChange={setEmail}
-      onPasswordChange={setPassword}
-      onSubmit={handleSubmit}
+      register={register}
+      errors={errors}
+      apiError={loginMutation.error instanceof Error ? loginMutation.error.message : null}
+      loading={loginMutation.isPending}
+      onSubmit={handleSubmit(onSubmit)}
     />
   );
 }

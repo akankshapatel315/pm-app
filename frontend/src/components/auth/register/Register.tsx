@@ -1,3 +1,4 @@
+import { Control, Controller, FieldErrors, UseFormRegister } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,33 +12,23 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: 'admin', label: 'Admin' },
 ];
 
-export interface RegisterProps {
+export interface RegisterFormValues {
   name: string;
   email: string;
   password: string;
   role: UserRole;
-  error: string | null;
-  loading: boolean;
-  onNameChange: (value: string) => void;
-  onEmailChange: (value: string) => void;
-  onPasswordChange: (value: string) => void;
-  onRoleChange: (value: UserRole) => void;
-  onSubmit: (e: React.FormEvent) => void;
 }
 
-export function Register({
-  name,
-  email,
-  password,
-  role,
-  error,
-  loading,
-  onNameChange,
-  onEmailChange,
-  onPasswordChange,
-  onRoleChange,
-  onSubmit,
-}: RegisterProps) {
+export interface RegisterProps {
+  register: UseFormRegister<RegisterFormValues>;
+  control: Control<RegisterFormValues>;
+  errors: FieldErrors<RegisterFormValues>;
+  apiError: string | null;
+  loading: boolean;
+  onSubmit: React.FormEventHandler<HTMLFormElement>;
+}
+
+export function Register({ register, control, errors, apiError, loading, onSubmit }: RegisterProps) {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
@@ -45,58 +36,63 @@ export function Register({
         <CardDescription>Sign up to start tracking your projects.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+        <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
           <div className="flex flex-col gap-2">
             <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => onNameChange(e.target.value)}
-              required
-            />
+            <Input id="name" type="text" {...register('name', { required: 'Name is required' })} />
+            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              value={email}
-              onChange={(e) => onEmailChange(e.target.value)}
-              required
+              {...register('email', { required: 'Email is required' })}
             />
+            {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               type="password"
-              value={password}
-              onChange={(e) => onPasswordChange(e.target.value)}
-              required
-              minLength={8}
+              {...register('password', {
+                required: 'Password is required',
+                minLength: { value: 8, message: 'Password must be at least 8 characters' },
+              })}
             />
+            {errors.password && (
+              <p className="text-sm text-destructive">{errors.password.message}</p>
+            )}
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="role">Role</Label>
-            <Select value={role} onValueChange={(value) => onRoleChange((value ?? 'member') as UserRole)}>
-              <SelectTrigger id="role" className="w-full">
-                <SelectValue placeholder="Select a role">
-                  {(value: string | null) =>
-                    ROLE_OPTIONS.find((option) => option.value === value)?.label ?? 'Select a role'
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {ROLE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              name="role"
+              control={control}
+              rules={{ required: true }}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={(value) => field.onChange(value ?? 'member')}>
+                  <SelectTrigger id="role" className="w-full">
+                    <SelectValue placeholder="Select a role">
+                      {(value: string | null) =>
+                        ROLE_OPTIONS.find((option) => option.value === value)?.label ??
+                        'Select a role'
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {apiError && <p className="text-sm text-destructive">{apiError}</p>}
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? 'Creating account...' : 'Create account'}
           </Button>
