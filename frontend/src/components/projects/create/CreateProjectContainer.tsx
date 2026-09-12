@@ -2,15 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { registerRequest, UserRole } from '@/lib/auth-api';
-import { Register } from './Register';
+import { createProject } from '@/lib/projects-api';
+import { CreateProject } from './CreateProject';
 
-export function RegisterContainer() {
+export function CreateProjectContainer() {
   const router = useRouter();
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('member');
+  const [clientName, setClientName] = useState('');
+  const [monthlyHourCap, setMonthlyHourCap] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -20,10 +19,12 @@ export function RegisterContainer() {
     setLoading(true);
 
     try {
-      const { token, user } = await registerRequest({ name, email, password, role });
-      localStorage.setItem('pm_app_token', token);
-      localStorage.setItem('pm_app_user', JSON.stringify(user));
-      router.push('/projects');
+      const project = await createProject({
+        name,
+        clientName,
+        monthlyHourCap: monthlyHourCap ? Number(monthlyHourCap) : null,
+      });
+      router.push(`/projects/${project.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
@@ -32,17 +33,15 @@ export function RegisterContainer() {
   }
 
   return (
-    <Register
+    <CreateProject
       name={name}
-      email={email}
-      password={password}
-      role={role}
+      clientName={clientName}
+      monthlyHourCap={monthlyHourCap}
       error={error}
       loading={loading}
       onNameChange={setName}
-      onEmailChange={setEmail}
-      onPasswordChange={setPassword}
-      onRoleChange={setRole}
+      onClientNameChange={setClientName}
+      onMonthlyHourCapChange={setMonthlyHourCap}
       onSubmit={handleSubmit}
     />
   );

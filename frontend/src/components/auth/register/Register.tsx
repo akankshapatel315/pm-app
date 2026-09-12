@@ -2,16 +2,26 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UserRole } from '@/lib/auth-api';
+
+const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
+  { value: 'member', label: 'Member' },
+  { value: 'pm', label: 'PM' },
+  { value: 'admin', label: 'Admin' },
+];
 
 export interface RegisterProps {
   name: string;
   email: string;
   password: string;
+  role: UserRole;
   error: string | null;
   loading: boolean;
   onNameChange: (value: string) => void;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
+  onRoleChange: (value: UserRole) => void;
   onSubmit: (e: React.FormEvent) => void;
 }
 
@@ -19,11 +29,13 @@ export function Register({
   name,
   email,
   password,
+  role,
   error,
   loading,
   onNameChange,
   onEmailChange,
   onPasswordChange,
+  onRoleChange,
   onSubmit,
 }: RegisterProps) {
   return (
@@ -64,6 +76,21 @@ export function Register({
               required
               minLength={8}
             />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="role">Role</Label>
+            <Select value={role} onValueChange={(value) => onRoleChange((value ?? 'member') as UserRole)}>
+              <SelectTrigger id="role" className="w-full">
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" disabled={loading} className="w-full">

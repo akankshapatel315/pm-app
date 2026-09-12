@@ -21,7 +21,7 @@ export function LoginContainer() {
       const { token, user } = await loginRequest({ email, password });
       localStorage.setItem('pm_app_token', token);
       localStorage.setItem('pm_app_user', JSON.stringify(user));
-      router.push('/');
+      router.push('/projects');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {

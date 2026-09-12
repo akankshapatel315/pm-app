@@ -12,8 +12,8 @@ export default (sequelize: Sequelize, DataTypes: typeof SequelizeDataTypes) => {
     declare readonly updatedAt: Date;
 
     static associate(models: any) {
-      Entry.belongsTo(models.User, { foreignKey: 'user_id', as: 'user' });
-      Entry.belongsTo(models.Project, { foreignKey: 'project_id', as: 'project' });
+      Entry.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
+      Entry.belongsTo(models.Project, { foreignKey: 'projectId', as: 'project' });
     }
   }
 

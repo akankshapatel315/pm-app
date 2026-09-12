@@ -12,16 +12,16 @@ export default (sequelize: Sequelize, DataTypes: typeof SequelizeDataTypes) => {
     declare readonly updatedAt: Date;
 
     static associate(models: any) {
-      Project.belongsTo(models.User, { foreignKey: 'created_by', as: 'creator' });
-      Project.belongsTo(models.User, { foreignKey: 'manager_id', as: 'manager' });
-      Project.hasMany(models.ProjectMember, { foreignKey: 'project_id', as: 'projectMembers' });
+      Project.belongsTo(models.User, { foreignKey: 'createdBy', as: 'creator' });
+      Project.belongsTo(models.User, { foreignKey: 'managerId', as: 'manager' });
+      Project.hasMany(models.ProjectMember, { foreignKey: 'projectId', as: 'projectMembers' });
       Project.belongsToMany(models.User, {
         through: models.ProjectMember,
-        foreignKey: 'project_id',
-        otherKey: 'user_id',
+        foreignKey: 'projectId',
+        otherKey: 'userId',
         as: 'members',
       });
-      Project.hasMany(models.Entry, { foreignKey: 'project_id', as: 'entries' });
+      Project.hasMany(models.Entry, { foreignKey: 'projectId', as: 'entries' });
     }
   }
 

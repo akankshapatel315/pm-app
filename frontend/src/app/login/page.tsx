@@ -1,9 +1,14 @@
-import { LoginContainer } from '@/components/auth/login/LoginContainer';
+'use client';
 
-export default function LoginPage() {
+import { LoginContainer } from '@/components/auth/login/LoginContainer';
+import { withGuestOnly } from '@/hoc/withGuestOnly';
+
+function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-8">
       <LoginContainer />
     </main>
   );
 }
+
+export default withGuestOnly(LoginPage);

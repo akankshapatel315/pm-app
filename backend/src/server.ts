@@ -3,11 +3,13 @@ dotenv.config();
 
 import app from './app';
 import db from './models';
+import { ensureDatabaseExists } from './utils/ensureDatabase';
 
 const PORT = process.env.PORT || 5000;
 
 async function start() {
   try {
+    await ensureDatabaseExists();
     await db.sequelize.authenticate();
     console.log('Database connection established.');
 
