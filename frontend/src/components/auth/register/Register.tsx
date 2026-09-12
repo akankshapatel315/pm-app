@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Control, Controller, FieldErrors, UseFormRegister } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -96,6 +97,12 @@ export function Register({ register, control, errors, apiError, loading, onSubmi
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? 'Creating account...' : 'Create account'}
           </Button>
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <Link href="/login" className="font-medium text-foreground underline underline-offset-4">
+              Log in
+            </Link>
+          </p>
         </form>
       </CardContent>
     </Card>
