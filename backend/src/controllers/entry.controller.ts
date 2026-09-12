@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
-import { Op } from 'sequelize';
+import { Op, UniqueConstraintError } from 'sequelize';
 import db from '../models';
 import { getMonthRange } from '../utils/date';
+
+const MAX_HOURS_PER_DAY = 24;
 
 export async function createEntry(req: Request, res: Response) {
   const { projectId, date, hours, notes } = req.body;
@@ -11,8 +13,15 @@ export async function createEntry(req: Request, res: Response) {
     return res.status(400).json({ message: 'projectId, date and hours are required' });
   }
 
-  if (typeof hours !== 'number' || !Number.isInteger(hours) || hours <= 0) {
-    return res.status(400).json({ message: 'hours must be a positive integer' });
+  if (
+    typeof hours !== 'number' ||
+    !Number.isInteger(hours) ||
+    hours <= 0 ||
+    hours > MAX_HOURS_PER_DAY
+  ) {
+    return res
+      .status(400)
+      .json({ message: `hours must be a positive integer between 1 and ${MAX_HOURS_PER_DAY}` });
   }
 
   const project = await db.Project.findByPk(projectId);
@@ -27,15 +36,22 @@ export async function createEntry(req: Request, res: Response) {
     return res.status(403).json({ message: 'You are not assigned to this project' });
   }
 
-  const entry = await db.Entry.create({
-    projectId,
-    userId: user.id,
-    date,
-    hours,
-    notes: notes ?? null,
-  });
+  try {
+    const entry = await db.Entry.create({
+      projectId,
+      userId: user.id,
+      date,
+      hours,
+      notes: notes ?? null,
+    });
 
-  return res.status(201).json({ entry });
+    return res.status(201).json({ entry });
+  } catch (error) {
+    if (error instanceof UniqueConstraintError) {
+      return res.status(409).json({ message: 'You have already logged time for this date' });
+    }
+    throw error;
+  }
 }
 
 export async function listMyEntries(req: Request, res: Response) {

@@ -3,7 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { addProjectMember, getProject, ProjectDetail as ProjectDetailData } from '@/lib/projects-api';
+import {
+  addProjectMember,
+  getProject,
+  ProjectDetail as ProjectDetailData,
+  updateProjectManager,
+} from '@/lib/projects-api';
+import { listUsers, UserSummary } from '@/lib/users-api';
 import { ProjectDetail } from './ProjectDetail';
 
 export function ProjectDetailContainer() {
@@ -15,9 +21,15 @@ export function ProjectDetailContainer() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [newMemberUserId, setNewMemberUserId] = useState('');
+  const [allMembers, setAllMembers] = useState<UserSummary[]>([]);
+  const [selectedNewMemberId, setSelectedNewMemberId] = useState('');
   const [addMemberError, setAddMemberError] = useState<string | null>(null);
   const [addMemberLoading, setAddMemberLoading] = useState(false);
+
+  const [managers, setManagers] = useState<UserSummary[]>([]);
+  const [selectedManagerId, setSelectedManagerId] = useState('');
+  const [managerError, setManagerError] = useState<string | null>(null);
+  const [managerLoading, setManagerLoading] = useState(false);
 
   function loadProject() {
     setLoading(true);
@@ -33,19 +45,43 @@ export function ProjectDetailContainer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, projectId]);
 
+  useEffect(() => {
+    if (!user) return;
+    listUsers('member').then(setAllMembers).catch(() => setAllMembers([]));
+    if (user.role === 'admin') {
+      listUsers('pm').then(setManagers).catch(() => setManagers([]));
+    }
+  }, [user]);
+
   async function handleAddMember(e: React.FormEvent) {
     e.preventDefault();
     setAddMemberError(null);
     setAddMemberLoading(true);
 
     try {
-      await addProjectMember(projectId, Number(newMemberUserId));
-      setNewMemberUserId('');
+      await addProjectMember(projectId, Number(selectedNewMemberId));
+      setSelectedNewMemberId('');
       loadProject();
     } catch (err) {
       setAddMemberError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setAddMemberLoading(false);
+    }
+  }
+
+  async function handleReassignManager(e: React.FormEvent) {
+    e.preventDefault();
+    setManagerError(null);
+    setManagerLoading(true);
+
+    try {
+      await updateProjectManager(projectId, Number(selectedManagerId));
+      setSelectedManagerId('');
+      loadProject();
+    } catch (err) {
+      setManagerError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setManagerLoading(false);
     }
   }
 
@@ -57,15 +93,26 @@ export function ProjectDetailContainer() {
   const canManageMembers =
     user.role === 'admin' || data.project.createdBy === user.id || data.project.managerId === user.id;
 
+  const assignedMemberIds = new Set(data.members.map((member) => member.id));
+  const availableMembers = allMembers.filter((member) => !assignedMemberIds.has(member.id));
+
   return (
     <ProjectDetail
       data={data}
       canManageMembers={canManageMembers}
-      newMemberUserId={newMemberUserId}
+      availableMembers={availableMembers}
+      selectedNewMemberId={selectedNewMemberId}
       addMemberError={addMemberError}
       addMemberLoading={addMemberLoading}
-      onNewMemberUserIdChange={setNewMemberUserId}
+      onSelectedNewMemberIdChange={setSelectedNewMemberId}
       onAddMember={handleAddMember}
+      isAdmin={user.role === 'admin'}
+      managers={managers}
+      selectedManagerId={selectedManagerId}
+      managerError={managerError}
+      managerLoading={managerLoading}
+      onSelectedManagerIdChange={setSelectedManagerId}
+      onReassignManager={handleReassignManager}
     />
   );
 }

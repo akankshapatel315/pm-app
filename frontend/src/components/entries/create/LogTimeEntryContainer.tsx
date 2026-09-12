@@ -9,6 +9,7 @@ import { LogTimeEntry } from './LogTimeEntry';
 export function LogTimeEntryContainer() {
   const user = useRequireAuth();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectId, setProjectId] = useState('');
   const [date, setDate] = useState('');
   const [hours, setHours] = useState('');
@@ -19,7 +20,10 @@ export function LogTimeEntryContainer() {
 
   useEffect(() => {
     if (!user) return;
-    listProjects().catch(() => []).then((result) => setProjects(result ?? []));
+    listProjects()
+      .catch(() => [])
+      .then((result) => setProjects(result ?? []))
+      .finally(() => setProjectsLoading(false));
   }, [user]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -52,6 +56,7 @@ export function LogTimeEntryContainer() {
   return (
     <LogTimeEntry
       projects={projects}
+      projectsLoading={projectsLoading}
       projectId={projectId}
       date={date}
       hours={hours}

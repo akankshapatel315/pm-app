@@ -13,7 +13,7 @@ async function getMonthlyHours(projectId: number, month?: string): Promise<numbe
 }
 
 export async function createProject(req: Request, res: Response) {
-  const { name, clientName, monthlyHourCap, managerId: requestedManagerId } = req.body;
+  const { name, clientName, monthlyHourCap, memberIds } = req.body;
   const user = req.user!;
 
   if (!name || !clientName) {
@@ -24,28 +24,37 @@ export async function createProject(req: Request, res: Response) {
     return res.status(400).json({ message: 'monthlyHourCap must be a number' });
   }
 
-  // A PM always manages the projects they create. Assigning a *different*
-  // PM to manage a project is an admin action (see updateProjectManager).
-  let managerId: number | null = user.id;
+  let memberIdList: number[] = [];
+  if (memberIds !== undefined) {
+    if (!Array.isArray(memberIds) || memberIds.some((memberId: unknown) => typeof memberId !== 'number')) {
+      return res.status(400).json({ message: 'memberIds must be an array of numbers' });
+    }
+    memberIdList = [...new Set(memberIds)] as number[];
 
-  if (user.role === 'admin') {
-    managerId = requestedManagerId ?? null;
-
-    if (managerId !== null) {
-      const manager = await db.User.findByPk(managerId);
-      if (!manager || manager.role === 'member') {
-        return res.status(400).json({ message: 'managerId must belong to a pm or admin user' });
+    if (memberIdList.length > 0) {
+      const existingUsers = await db.User.findAll({ where: { id: memberIdList } });
+      if (existingUsers.length !== memberIdList.length) {
+        return res.status(400).json({ message: 'One or more memberIds do not exist' });
       }
     }
   }
 
+  // Only a PM can reach this endpoint (see project.routes.ts), and a PM
+  // always manages the projects they create. Reassigning a project to a
+  // different manager afterward is an admin-only action (updateProjectManager).
   const project = await db.Project.create({
     name,
     clientName,
     monthlyHourCap: monthlyHourCap ?? null,
     createdBy: user.id,
-    managerId,
+    managerId: user.id,
   });
+
+  if (memberIdList.length > 0) {
+    await db.ProjectMember.bulkCreate(
+      memberIdList.map((memberId) => ({ userId: memberId, projectId: project.id }))
+    );
+  }
 
   return res.status(201).json({ project });
 }
@@ -116,6 +125,10 @@ export async function getProject(req: Request, res: Response) {
     include: [{ model: db.User, as: 'user', attributes: ['id', 'name', 'email', 'role'] }],
   });
 
+  const manager = project.managerId
+    ? await db.User.findByPk(project.managerId, { attributes: ['id', 'name', 'email'] })
+    : null;
+
   const hoursLogged = await getMonthlyHours(Number(id), month);
   const { percentage, status } = computeCapStatus(hoursLogged, project.monthlyHourCap);
 
@@ -128,6 +141,7 @@ export async function getProject(req: Request, res: Response) {
       createdBy: project.createdBy,
       managerId: project.managerId,
     },
+    manager,
     members: members.map((m: any) => m.user),
     hoursLogged,
     percentage,

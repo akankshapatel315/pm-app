@@ -1,10 +1,10 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CapStatus, ProjectDetail as ProjectDetailData } from '@/lib/projects-api';
+import { UserSummary } from '@/lib/users-api';
 
 const STATUS_STYLES: Record<CapStatus, { label: string; badgeClass: string; barClass: string }> = {
   ok: {
@@ -27,23 +27,39 @@ const STATUS_STYLES: Record<CapStatus, { label: string; badgeClass: string; barC
 export interface ProjectDetailProps {
   data: ProjectDetailData;
   canManageMembers: boolean;
-  newMemberUserId: string;
+  availableMembers: UserSummary[];
+  selectedNewMemberId: string;
   addMemberError: string | null;
   addMemberLoading: boolean;
-  onNewMemberUserIdChange: (value: string) => void;
+  onSelectedNewMemberIdChange: (value: string) => void;
   onAddMember: (e: React.FormEvent) => void;
+  isAdmin: boolean;
+  managers: UserSummary[];
+  selectedManagerId: string;
+  managerError: string | null;
+  managerLoading: boolean;
+  onSelectedManagerIdChange: (value: string) => void;
+  onReassignManager: (e: React.FormEvent) => void;
 }
 
 export function ProjectDetail({
   data,
   canManageMembers,
-  newMemberUserId,
+  availableMembers,
+  selectedNewMemberId,
   addMemberError,
   addMemberLoading,
-  onNewMemberUserIdChange,
+  onSelectedNewMemberIdChange,
   onAddMember,
+  isAdmin,
+  managers,
+  selectedManagerId,
+  managerError,
+  managerLoading,
+  onSelectedManagerIdChange,
+  onReassignManager,
 }: ProjectDetailProps) {
-  const { project, members, hoursLogged, percentage, status } = data;
+  const { project, manager, members, hoursLogged, percentage, status } = data;
   const style = STATUS_STYLES[status];
   const progressValue = percentage === null ? 0 : Math.min(percentage, 100);
 
@@ -57,7 +73,7 @@ export function ProjectDetail({
           </div>
           {project.monthlyHourCap !== null && <Badge className={style.badgeClass}>{style.label}</Badge>}
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-3">
           {project.monthlyHourCap !== null ? (
             <div className="flex flex-col gap-2">
               <Progress value={progressValue} className={style.barClass} />
@@ -70,8 +86,47 @@ export function ProjectDetail({
               {hoursLogged}h logged this month (no monthly cap set)
             </p>
           )}
+          <p className="text-sm text-muted-foreground">
+            Manager: {manager ? `${manager.name} (${manager.email})` : 'Unassigned'}
+          </p>
         </CardContent>
       </Card>
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reassign manager</CardTitle>
+            <CardDescription>Only admins can change who manages this project.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="flex items-end gap-2" onSubmit={onReassignManager}>
+              <div className="flex flex-1 flex-col gap-2">
+                <Select value={selectedManagerId} onValueChange={(value) => onSelectedManagerIdChange(value ?? '')}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a PM">
+                      {(value: string | null) => {
+                        const pm = managers.find((m) => String(m.id) === value);
+                        return pm ? `${pm.name} (${pm.email})` : 'Select a PM';
+                      }}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {managers.map((pm) => (
+                      <SelectItem key={pm.id} value={String(pm.id)}>
+                        {pm.name} ({pm.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" disabled={managerLoading || !selectedManagerId}>
+                {managerLoading ? 'Reassigning...' : 'Reassign'}
+              </Button>
+            </form>
+            {managerError && <p className="mt-2 text-sm text-destructive">{managerError}</p>}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -92,17 +147,36 @@ export function ProjectDetail({
 
           {canManageMembers && (
             <form className="flex items-end gap-2" onSubmit={onAddMember}>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="newMemberUserId">Add member by user ID</Label>
-                <Input
-                  id="newMemberUserId"
-                  type="number"
-                  value={newMemberUserId}
-                  onChange={(e) => onNewMemberUserIdChange(e.target.value)}
-                  required
-                />
+              <div className="flex flex-1 flex-col gap-2">
+                <Select
+                  value={selectedNewMemberId}
+                  onValueChange={(value) => onSelectedNewMemberIdChange(value ?? '')}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue
+                      placeholder={
+                        availableMembers.length === 0 ? 'No members available to add' : 'Select a member'
+                      }
+                    >
+                      {(value: string | null) => {
+                        const member = availableMembers.find((m) => String(m.id) === value);
+                        if (member) return `${member.name} (${member.email})`;
+                        return availableMembers.length === 0
+                          ? 'No members available to add'
+                          : 'Select a member';
+                      }}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableMembers.map((member) => (
+                      <SelectItem key={member.id} value={String(member.id)}>
+                        {member.name} ({member.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Button type="submit" disabled={addMemberLoading}>
+              <Button type="submit" disabled={addMemberLoading || !selectedNewMemberId}>
                 {addMemberLoading ? 'Adding...' : 'Add'}
               </Button>
             </form>

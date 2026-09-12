@@ -21,6 +21,12 @@ export interface ProjectMemberUser {
   role: string;
 }
 
+export interface ProjectManager {
+  id: number;
+  name: string;
+  email: string;
+}
+
 export interface ProjectDetail {
   project: {
     id: number;
@@ -30,6 +36,7 @@ export interface ProjectDetail {
     createdBy: number;
     managerId: number | null;
   };
+  manager: ProjectManager | null;
   members: ProjectMemberUser[];
   hoursLogged: number;
   percentage: number | null;
@@ -40,6 +47,7 @@ export interface CreateProjectPayload {
   name: string;
   clientName: string;
   monthlyHourCap: number | null;
+  memberIds?: number[];
 }
 
 export async function listProjects(): Promise<ProjectSummary[]> {
@@ -63,5 +71,12 @@ export async function addProjectMember(projectId: number, userId: number): Promi
   await authFetch(`/projects/${projectId}/members`, {
     method: 'POST',
     body: JSON.stringify({ userId }),
+  });
+}
+
+export async function updateProjectManager(projectId: number, managerId: number): Promise<void> {
+  await authFetch(`/projects/${projectId}/manager`, {
+    method: 'PATCH',
+    body: JSON.stringify({ managerId }),
   });
 }

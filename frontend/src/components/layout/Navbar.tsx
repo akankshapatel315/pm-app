@@ -19,10 +19,12 @@ export function Navbar({ user, onLogout }: NavbarProps) {
             <Link href="/projects" className="text-sm text-muted-foreground hover:text-foreground">
               Projects
             </Link>
-            <Link href="/time-entries/new" className="text-sm text-muted-foreground hover:text-foreground">
-              Log time
-            </Link>
-            {(user.role === 'pm' || user.role === 'admin') && (
+            {user.role !== 'admin' && (
+              <Link href="/time-entries/new" className="text-sm text-muted-foreground hover:text-foreground">
+                Log time
+              </Link>
+            )}
+            {user.role === 'pm' && (
               <Link href="/projects/new" className="text-sm text-muted-foreground hover:text-foreground">
                 New project
               </Link>

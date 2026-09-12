@@ -81,7 +81,11 @@ export function Register({
             <Label htmlFor="role">Role</Label>
             <Select value={role} onValueChange={(value) => onRoleChange((value ?? 'member') as UserRole)}>
               <SelectTrigger id="role" className="w-full">
-                <SelectValue placeholder="Select a role" />
+                <SelectValue placeholder="Select a role">
+                  {(value: string | null) =>
+                    ROLE_OPTIONS.find((option) => option.value === value)?.label ?? 'Select a role'
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {ROLE_OPTIONS.map((option) => (

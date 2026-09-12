@@ -40,6 +40,10 @@ export default (sequelize: Sequelize, DataTypes: typeof SequelizeDataTypes) => {
       hours: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        validate: {
+          min: 1,
+          max: 24,
+        },
       },
     },
     {
@@ -47,6 +51,12 @@ export default (sequelize: Sequelize, DataTypes: typeof SequelizeDataTypes) => {
       modelName: 'Entry',
       tableName: 'entries',
       underscored: true,
+      indexes: [
+        {
+          unique: true,
+          fields: ['user_id', 'date'],
+        },
+      ],
     }
   );
 

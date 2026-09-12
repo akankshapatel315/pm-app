@@ -34,7 +34,7 @@ export function ProjectListContainer() {
           <Button variant="outline" render={<Link href="/time-entries/new" />}>
             Log time
           </Button>
-          {(user.role === 'pm' || user.role === 'admin') && (
+          {user.role === 'pm' && (
             <Button render={<Link href="/projects/new" />}>New project</Button>
           )}
         </div>
